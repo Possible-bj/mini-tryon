@@ -8,6 +8,8 @@ import sys
 
 # Add current directory to path
 sys.path.append(os.path.dirname(__file__))
+# Add the src directory to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
 
 from unet_models import main
 

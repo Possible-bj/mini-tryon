@@ -9,11 +9,11 @@ import os
 from transformers import CLIPVisionModelWithProjection, CLIPImageProcessor
 
 # Add parent directory to path to access custom UNet models
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
 
 # Import custom UNet models
-from src.unet_hacked_tryon import UNet2DConditionModel
-from src.unet_hacked_garmnet import UNet2DConditionModel as UNet2DConditionModel_ref
+from unet_hacked_tryon import UNet2DConditionModel
+from unet_hacked_garmnet import UNet2DConditionModel as UNet2DConditionModel_ref
 
 class UNetModels:
     """Class to manage UNet models for IDM-VTON"""
