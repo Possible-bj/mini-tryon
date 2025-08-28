@@ -32,7 +32,7 @@ def main():
     print("📦 Installing compatible versions...")
     install_commands = [
         "pip install 'transformers==4.35.0'",
-        "pip install 'diffusers>=0.24.0,<0.25.0'",
+        "pip install 'diffusers==0.21.4'",
         "pip install 'huggingface_hub>=0.16.0,<0.17.0'"
     ]
     
