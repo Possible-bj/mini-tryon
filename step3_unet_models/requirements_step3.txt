@@ -1,0 +1,30 @@
+# Step 3: UNet Models Requirements
+# Complete requirements for loading UNet models and IP-Adapter
+
+# Core ML Libraries
+torch>=2.0.0
+torchvision>=0.15.0
+
+# HuggingFace Libraries (for models)
+transformers>=4.36.0
+diffusers>=0.25.0
+huggingface_hub>=0.19.0
+
+# Image Processing
+Pillow>=10.0.0
+
+# Scientific Computing
+numpy>=1.24.0
+
+# Tensor Operations (for einops)
+einops>=0.7.0
+
+# Utilities
+tqdm>=4.66.0
+
+# Additional dependencies for UNet models
+accelerate>=0.25.0
+safetensors>=0.4.0
+
+# For IP-Adapter functionality
+xformers>=0.0.22  # Optional but recommended for attention optimization
