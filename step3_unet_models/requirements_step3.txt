@@ -6,7 +6,7 @@ torch>=2.0.0
 torchvision>=0.15.0
 
 # HuggingFace Libraries (for models)
-transformers>=4.36.0
+transformers==4.35.0  # Pin to compatible version with huggingface_hub 0.16.x
 diffusers>=0.24.0,<0.25.0  # Pin to compatible version
 huggingface_hub>=0.16.0,<0.17.0  # Pin to version with cached_download
 

@@ -15,12 +15,12 @@ def run_command(cmd):
         return False, "", str(e)
 
 def main():
-    print("🔧 Fixing diffusers and huggingface_hub compatibility issues...")
-    print("=" * 60)
+    print("🔧 Fixing transformers, diffusers and huggingface_hub compatibility issues...")
+    print("=" * 70)
     
     # Uninstall current packages
     print("📦 Uninstalling current packages...")
-    packages = ["diffusers", "huggingface_hub"]
+    packages = ["transformers", "diffusers", "huggingface_hub"]
     for package in packages:
         success, stdout, stderr = run_command(f"pip uninstall {package} -y")
         if success:
@@ -31,6 +31,7 @@ def main():
     # Install compatible versions
     print("📦 Installing compatible versions...")
     install_commands = [
+        "pip install 'transformers==4.35.0'",
         "pip install 'diffusers>=0.24.0,<0.25.0'",
         "pip install 'huggingface_hub>=0.16.0,<0.17.0'"
     ]
