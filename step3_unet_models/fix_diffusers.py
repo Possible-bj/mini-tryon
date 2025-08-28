@@ -15,26 +15,34 @@ def run_command(cmd):
         return False, "", str(e)
 
 def main():
-    print("🔧 Fixing diffusers compatibility issues...")
-    print("=" * 50)
+    print("🔧 Fixing diffusers and huggingface_hub compatibility issues...")
+    print("=" * 60)
     
-    # Uninstall current diffusers
-    print("📦 Uninstalling current diffusers...")
-    success, stdout, stderr = run_command("pip uninstall diffusers -y")
-    if success:
-        print("✅ Successfully uninstalled diffusers")
-    else:
-        print(f"⚠️  Warning: {stderr}")
+    # Uninstall current packages
+    print("📦 Uninstalling current packages...")
+    packages = ["diffusers", "huggingface_hub"]
+    for package in packages:
+        success, stdout, stderr = run_command(f"pip uninstall {package} -y")
+        if success:
+            print(f"✅ Successfully uninstalled {package}")
+        else:
+            print(f"⚠️  Warning for {package}: {stderr}")
     
-    # Install compatible version
-    print("📦 Installing compatible diffusers version...")
-    success, stdout, stderr = run_command("pip install 'diffusers>=0.24.0,<0.25.0'")
-    if success:
-        print("✅ Successfully installed compatible diffusers")
-        print(stdout)
-    else:
-        print(f"❌ Failed to install diffusers: {stderr}")
-        return False
+    # Install compatible versions
+    print("📦 Installing compatible versions...")
+    install_commands = [
+        "pip install 'diffusers>=0.24.0,<0.25.0'",
+        "pip install 'huggingface_hub>=0.16.0,<0.17.0'"
+    ]
+    
+    for cmd in install_commands:
+        print(f"Running: {cmd}")
+        success, stdout, stderr = run_command(cmd)
+        if success:
+            print("✅ Successfully installed")
+        else:
+            print(f"❌ Failed: {stderr}")
+            return False
     
     print("\n🎉 Fix complete! Try running Step 3 again.")
     return True
