@@ -37,30 +37,13 @@ from diffusers.models.embeddings import (
     ImageHintTimeEmbedding,
     ImageProjection,
     ImageTimeEmbedding,
+    PositionNet,
     TextImageProjection,
     TextImageTimeEmbedding,
     TextTimeEmbedding,
     TimestepEmbedding,
     Timesteps,
 )
-
-# PositionNet might not be available in all diffusers versions
-try:
-    from diffusers.models.embeddings import PositionNet
-except ImportError:
-    # Create a simple PositionNet replacement if not available
-    class PositionNet(nn.Module):
-        def __init__(self, positive_len=768, out_dim=1280, feature_type="text-only"):
-            super().__init__()
-            self.positive_len = positive_len
-            self.out_dim = out_dim
-            self.feature_type = feature_type
-            # Simple linear projection as fallback
-            self.proj = nn.Linear(positive_len, out_dim)
-        
-        def forward(self, **kwargs):
-            # Return a dummy tensor for now
-            return torch.zeros(1, 1, self.out_dim)
 
 
 from diffusers.models.modeling_utils import ModelMixin
