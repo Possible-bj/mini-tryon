@@ -78,6 +78,8 @@ class SimpleUNetModels:
             }
             
             unet = UNet2DConditionModel(**config)
+            # Fixed: Convert to float16 after creation to match expected dtype
+            unet = unet.to(dtype=torch.float16)
             unet.to(self.device)
             unet.requires_grad_(False)
             unet.eval()
@@ -132,6 +134,8 @@ class SimpleUNetModels:
             }
             
             unet_encoder = UNet2DConditionModel(**config)
+            # Fixed: Convert to float16 after creation to match expected dtype
+            unet_encoder = unet_encoder.to(dtype=torch.float16)
             unet_encoder.to(self.device)
             unet_encoder.requires_grad_(False)
             unet_encoder.eval()
