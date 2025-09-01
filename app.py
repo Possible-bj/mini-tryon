@@ -163,7 +163,10 @@ class ChangeClothesAI:
         # Move to device
         self.pipe.to(self.device)
         self.pipe.unet_encoder.to(self.device)
-        self.openpose_model.preprocessor.body_estimation.model.to(self.device)
+        
+        # Move OpenPose model to device if it's available
+        if self.openpose_model is not None:
+            self.openpose_model.preprocessor.body_estimation.model.to(self.device)
         
         print("Pipeline setup complete!")
 
