@@ -81,6 +81,26 @@ class SimpleTryOnPipeline:
         
         logger.info("✅ Pipeline components configured!")
     
+    def debug_feature_shapes(self, human_features, garment_features):
+        """Debug method to show feature shapes"""
+        logger.info(f"🔍 Debug Feature Shapes:")
+        logger.info(f"   Human features: {human_features.shape}")
+        logger.info(f"   Garment features: {garment_features.shape}")
+        logger.info(f"   Human dtype: {human_features.dtype}")
+        logger.info(f"   Garment dtype: {garment_features.dtype}")
+        logger.info(f"   Human device: {human_features.device}")
+        logger.info(f"   Garment device: {garment_features.device}")
+        
+        if human_features.dim() == 2:
+            logger.info(f"   Human features are 2D (flattened)")
+        elif human_features.dim() == 4:
+            logger.info(f"   Human features are 4D (spatial)")
+        
+        if garment_features.dim() == 4:
+            logger.info(f"   Garment features are 4D (spatial)")
+        else:
+            logger.info(f"   Garment features are {garment_features.dim()}D")
+    
     def preprocess_image(self, image: Union[Image.Image, str, np.ndarray], 
                         target_size: Tuple[int, int] = None) -> torch.Tensor:
         """
@@ -238,6 +258,9 @@ class SimpleTryOnPipeline:
             garment_features = self.encode_garment(garment_tensor)
             human_features = self.encode_human_image(human_tensor)
             
+            # Debug feature shapes
+            self.debug_feature_shapes(human_features, garment_features)
+            
             # Generate try-on image using main UNet
             logger.info("🎭 Generating try-on image...")
             
@@ -271,16 +294,79 @@ class SimpleTryOnPipeline:
         logger.info(f"🔄 Running simplified generation ({num_steps} steps)...")
         
         # This is a placeholder - in practice, you'd implement the full diffusion process
-        # For now, we'll just return a processed version of the input
+        # For now, we'll create a proper RGB output that can be visualized
         
-        # Combine features (simplified approach)
-        combined_features = human_features + garment_features.mean(dim=[-2, -1], keepdim=True)
-        
-        # Create a simple output (this is just for demonstration)
-        # In reality, you'd run the full diffusion process here
-        output = torch.sigmoid(combined_features.mean(dim=1, keepdim=True))
-        
-        return output
+        try:
+            # Create a simple RGB output by combining human and garment features
+            # We'll create a proper 64x64 RGB image
+            
+            # Get target dimensions
+            target_size = (64, 64)
+            
+            # Process human features - create a proper spatial representation
+            if human_features.dim() == 2:  # [1, 1024]
+                # Create a 32x32 spatial representation first
+                h = w = 32
+                human_spatial = human_features.view(1, 1, h, w)
+            else:
+                # Already spatial, take mean across channels
+                human_spatial = human_features.mean(dim=1, keepdim=True)
+            
+            # Ensure human_spatial has proper dimensions
+            if human_spatial.shape[-2:] != target_size:
+                human_spatial = F.interpolate(
+                    human_spatial, 
+                    size=target_size, 
+                    mode='bilinear', 
+                    align_corners=False
+                )
+            
+            # Process garment features - ensure proper dimensions
+            if garment_features.dim() == 4:  # [1, 1280, 64, 64]
+                garment_spatial = garment_features.mean(dim=1, keepdim=True)  # [1, 1, 64, 64]
+            else:
+                # Fallback: create spatial representation
+                garment_spatial = garment_features.mean(dim=-1, keepdim=True).unsqueeze(1)
+                garment_spatial = F.interpolate(
+                    garment_spatial, 
+                    size=target_size, 
+                    mode='bilinear', 
+                    align_corners=False
+                )
+            
+            # Ensure both tensors have the same shape
+            assert human_spatial.shape[-2:] == target_size, f"Human spatial shape: {human_spatial.shape}"
+            assert garment_spatial.shape[-2:] == target_size, f"Garment spatial shape: {garment_spatial.shape}"
+            
+            # Create RGB output with proper dimensions
+            rgb_output = torch.zeros(1, 3, target_size[0], target_size[1], 
+                                   device=human_features.device, dtype=human_features.dtype)
+            
+            # Red channel: Human base (normalized)
+            human_norm = (human_spatial - human_spatial.min()) / (human_spatial.max() - human_spatial.min() + 1e-8)
+            rgb_output[:, 0:1, :, :] = human_norm
+            
+            # Green channel: Garment influence (normalized)
+            garment_norm = (garment_spatial - garment_spatial.min()) / (garment_spatial.max() - garment_spatial.min() + 1e-8)
+            rgb_output[:, 1:2, :, :] = garment_norm
+            
+            # Blue channel: Combined effect (normalized)
+            combined = (human_spatial + garment_spatial) / 2
+            combined_norm = (combined - combined.min()) / (combined.max() - combined.min() + 1e-8)
+            rgb_output[:, 2:3, :, :] = combined_norm
+            
+            logger.info(f"✅ Generated RGB output: {rgb_output.shape}")
+            logger.info(f"   - Human spatial: {human_spatial.shape}")
+            logger.info(f"   - Garment spatial: {garment_spatial.shape}")
+            logger.info(f"   - RGB output: {rgb_output.shape}")
+            return rgb_output
+            
+        except Exception as e:
+            logger.error(f"❌ Error in simplified generation: {e}")
+            # Fallback: create a simple RGB pattern
+            fallback = torch.rand(1, 3, 64, 64, device=human_features.device, dtype=human_features.dtype)
+            logger.info(f"⚠️  Using fallback output: {fallback.shape}")
+            return fallback
     
     def _tensor_to_pil(self, tensor: torch.Tensor) -> Image.Image:
         """Convert tensor back to PIL image"""
@@ -303,9 +389,24 @@ class SimpleTryOnPipeline:
         elif tensor.dim() == 3 and tensor.shape[0] == 3:
             # RGB
             array = tensor.permute(1, 2, 0).numpy().astype(np.uint8)
+        elif tensor.dim() == 4 and tensor.shape[1] == 3:
+            # Batch RGB: [B, 3, H, W] -> [H, W, 3]
+            array = tensor.squeeze(0).permute(1, 2, 0).numpy().astype(np.uint8)
         else:
-            # Default case
-            array = tensor.numpy().astype(np.uint8)
+            # Default case - try to handle any shape
+            if tensor.dim() == 4:
+                tensor = tensor.squeeze(0)  # Remove batch dimension
+            if tensor.dim() == 3 and tensor.shape[0] == 1:
+                # Single channel -> repeat to RGB
+                tensor = tensor.repeat(3, 1, 1)
+            elif tensor.dim() == 3 and tensor.shape[0] != 3:
+                # Wrong number of channels -> take first 3 or repeat
+                if tensor.shape[0] > 3:
+                    tensor = tensor[:3, :, :]
+                else:
+                    tensor = tensor.repeat(3 // tensor.shape[0] + 1, 1, 1)[:3, :, :]
+            
+            array = tensor.permute(1, 2, 0).numpy().astype(np.uint8)
         
         return Image.fromarray(array)
     
