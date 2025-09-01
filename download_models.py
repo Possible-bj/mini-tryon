@@ -83,19 +83,16 @@ def main():
         
     }
     
-    # Alternative sources for the models
+    # Alternative sources for the models (fallbacks if primary URLs fail)
     alternative_sources = {
         "ckpt/humanparsing/parsing_atr.onnx": [
-            "https://github.com/EngineeringResearch/IDM-VTON/releases/download/v1.0/parsing_atr.onnx",
-            "https://huggingface.co/spaces/IDM-VTON/IDM-VTON/resolve/main/ckpt/humanparsing/parsing_atr.onnx"
+            "https://cnb.cool/chengxianggongre/IDM-VTON/-/lfs/04c7d1d070d0e0ae943d86b18cb5aaaea9e278d97462e9cfb270cbbe4cd977f4?name=parsing_atr.onnx"
         ],
         "ckpt/humanparsing/parsing_lip.onnx": [
-            "https://github.com/EngineeringResearch/IDM-VTON/releases/download/v1.0/parsing_lip.onnx",
-            "https://huggingface.co/spaces/IDM-VTON/IDM-VTON/resolve/main/ckpt/humanparsing/parsing_lip.onnx"
+            "https://cnb.cool/chengxianggongre/IDM-VTON/-/lfs/8436e1dae96e2601c373d1ace29c8f0978b16357d9038c17a8ba756cca376dbc?name=parsing_lip.onnx"
         ],
         "ckpt/openpose/ckpts/body_pose_model.pth": [
-            "https://github.com/EngineeringResearch/IDM-VTON/releases/download/v1.0/body_pose_model.pth",
-            "https://huggingface.co/spaces/IDM-VTON/IDM-VTON/resolve/main/ckpt/openpose/ckpts/body_pose_model.pth"
+            "https://huggingface.co/spaces/pngwn/IDM-VTON/resolve/main/ckpt/openpose/ckpts/body_pose_model.pth"
         ]
     }
     
@@ -116,10 +113,17 @@ def main():
     for model_path in missing_models:
         print(f"\n--- Downloading {model_path} ---")
         
-        # Try alternative sources first
+        # Try primary URL first
+        primary_url = models[model_path]["url"]
+        print(f"Trying primary source: {primary_url}")
+        if download_file(primary_url, model_path, models[model_path]["expected_size"]):
+            print(f"✓ Successfully downloaded {model_path}")
+            continue
+        
+        # Try alternative sources if primary fails
         downloaded = False
         for i, url in enumerate(alternative_sources[model_path]):
-            print(f"Trying source {i+1}: {url}")
+            print(f"Trying alternative source {i+1}: {url}")
             if download_file(url, model_path, models[model_path]["expected_size"]):
                 downloaded = True
                 break
