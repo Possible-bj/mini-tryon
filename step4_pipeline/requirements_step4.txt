@@ -8,6 +8,7 @@ torchvision>=0.15.0
 # Image processing
 Pillow>=9.0.0
 numpy>=1.21.0
+matplotlib>=3.5.0
 
 # ML frameworks (inherited from Step 3)
 diffusers>=0.25.0
