@@ -43,6 +43,15 @@ def test_device():
         device = "cuda"
         print(f"✅ CUDA available: {torch.cuda.get_device_name(0)}")
         print(f"   Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
+        
+        # Test CUDA functionality
+        try:
+            test_tensor = torch.randn(1, 1, device=device)
+            print(f"   ✅ CUDA tensor creation successful")
+        except Exception as e:
+            print(f"   ❌ CUDA tensor creation failed: {e}")
+            device = "cpu"
+            print(f"   ⚠️  Falling back to CPU")
     else:
         device = "cpu"
         print("⚠️  CUDA not available, using CPU")
@@ -56,8 +65,10 @@ def test_simple_unet_models():
     try:
         from simple_unet_models import SimpleUNetModels
         
-        # Initialize with CPU for testing (faster and no GPU memory issues)
-        device = "cpu"
+        # Use the detected device
+        device = test_device()
+        print(f"\n🔧 Testing with device: {device}")
+        
         unet_models = SimpleUNetModels(device=device)
         
         # Test loading all models
@@ -74,13 +85,27 @@ def test_simple_unet_models():
                 for key, value in details.items():
                     print(f"     {key}: {value}")
             
-            # Test basic functionality
+            # Test basic functionality with proper dtype handling
             print("\n🧪 Testing basic functionality...")
-            dummy_garment = torch.randn(1, 3, 64, 64, device=device)  # Smaller size for testing
+            
+            # Create test tensor with proper dtype and size
+            if device == "cuda":
+                # Use smaller size for GPU testing to avoid memory issues
+                dummy_garment = torch.randn(1, 3, 64, 64, device=device, dtype=torch.float16)
+            else:
+                # Use small size for CPU testing
+                dummy_garment = torch.randn(1, 3, 32, 32, device=device, dtype=torch.float16)
+            
+            print(f"   - Test tensor shape: {dummy_garment.shape}")
+            print(f"   - Test tensor dtype: {dummy_garment.dtype}")
+            print(f"   - Test tensor device: {dummy_garment.device}")
+            
             result = unet_models.test_garment_encoding(dummy_garment)
             
             if result is not None:
                 print("✅ Basic functionality test passed!")
+                print(f"   - Output shape: {result.shape}")
+                print(f"   - Output dtype: {result.dtype}")
             else:
                 print("⚠️  Basic functionality test had issues")
             
@@ -122,6 +147,7 @@ def main():
     print("   ✅ Package imports working")
     print("   ✅ Device detection working")
     print("   ✅ Simplified UNet models working")
+    print(f"   ✅ Using device: {device}")
     print("\n🚀 You can now use the simplified implementation!")
     
     return True

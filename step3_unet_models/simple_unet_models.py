@@ -36,10 +36,11 @@ class SimpleUNetModels:
         print("\n1. Loading Main UNet...")
         try:
             # Use standard diffusers UNet2DConditionModel
+            # Fixed: Use 'dtype' instead of deprecated 'torch_dtype'
             unet = UNet2DConditionModel.from_pretrained(
                 self.model_name,
                 subfolder="unet",
-                torch_dtype=torch.float16,
+                dtype=torch.float16,  # Fixed: was torch_dtype
                 use_safetensors=True,
                 local_files_only=False,  # Allow downloading if needed
             )
@@ -95,7 +96,7 @@ class SimpleUNetModels:
             unet_encoder = UNet2DConditionModel.from_pretrained(
                 self.model_name,
                 subfolder="unet_encoder",
-                torch_dtype=torch.float16,
+                dtype=torch.float16,  # Fixed: was torch_dtype
                 use_safetensors=True,
                 local_files_only=False,
             )
@@ -149,7 +150,7 @@ class SimpleUNetModels:
             image_encoder = CLIPVisionModelWithProjection.from_pretrained(
                 self.model_name,
                 subfolder="image_encoder",
-                torch_dtype=torch.float16,
+                dtype=torch.float16,  # Fixed: was torch_dtype
                 local_files_only=False,
             )
             image_encoder.to(self.device)
@@ -175,7 +176,7 @@ class SimpleUNetModels:
             # Use a standard CLIP model as fallback
             image_encoder = CLIPVisionModelWithProjection.from_pretrained(
                 "openai/clip-vit-large-patch14",
-                torch_dtype=torch.float16,
+                dtype=torch.float16,  # Fixed: was torch_dtype
             )
             image_encoder.to(self.device)
             image_encoder.requires_grad_(False)
@@ -215,10 +216,20 @@ class SimpleUNetModels:
         
         try:
             with torch.no_grad():
+                # Fixed: Ensure consistent data types (Float vs Half issue)
+                # Convert garment_tensor to float16 to match model dtype
+                garment_tensor = garment_tensor.to(dtype=torch.float16)
+                
                 # Create dummy timestep and encoder hidden states
                 batch_size = garment_tensor.shape[0]
-                timestep = torch.tensor([0], device=self.device)
-                encoder_hidden_states = torch.randn(batch_size, 77, 1280, device=self.device)
+                timestep = torch.tensor([0], device=self.device, dtype=torch.long)
+                
+                # Fixed: Ensure encoder_hidden_states has same dtype as model
+                encoder_hidden_states = torch.randn(
+                    batch_size, 77, 1280, 
+                    device=self.device, 
+                    dtype=torch.float16  # Match model dtype
+                )
                 
                 # Test forward pass
                 output = self.models['garment_encoder_unet'](
@@ -231,10 +242,18 @@ class SimpleUNetModels:
                 print("✅ Garment encoding test successful")
                 print(f"   - Input shape: {garment_tensor.shape}")
                 print(f"   - Output shape: {output.sample.shape}")
+                print(f"   - Input dtype: {garment_tensor.dtype}")
+                print(f"   - Output dtype: {output.sample.dtype}")
                 return output.sample
                 
         except Exception as e:
             print(f"❌ Garment encoding test failed: {e}")
+            print(f"   - Garment tensor dtype: {garment_tensor.dtype}")
+            print(f"   - Garment tensor device: {garment_tensor.device}")
+            if 'garment_encoder_unet' in self.models:
+                model = self.models['garment_encoder_unet']
+                print(f"   - Model device: {next(model.parameters()).device}")
+                print(f"   - Model dtype: {next(model.parameters()).dtype}")
             return None
     
     def get_model_info(self):
@@ -251,12 +270,14 @@ class SimpleUNetModels:
                     'cross_attention_dim': getattr(config, 'cross_attention_dim', 'N/A'),
                     'device': str(next(model.parameters()).device),
                     'parameters': sum(p.numel() for p in model.parameters()),
+                    'dtype': str(next(model.parameters()).dtype),  # Added dtype info
                 }
             else:
                 info[name] = {
                     'type': type(model).__name__,
                     'device': 'N/A',
                     'parameters': 'N/A',
+                    'dtype': 'N/A',
                 }
         
         return info
@@ -277,8 +298,11 @@ def main():
     print("🧪 Testing Simplified UNet Models")
     print("=" * 40)
     
-    # Initialize models
-    unet_models = SimpleUNetModels()
+    # Initialize models - Fixed: Use CUDA if available
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"🔧 Using device: {device}")
+    
+    unet_models = SimpleUNetModels(device=device)
     
     # Load all models
     success = unet_models.load_all()
@@ -292,9 +316,19 @@ def main():
             for key, value in details.items():
                 print(f"     {key}: {value}")
         
-        # Test garment encoding
-        dummy_garment = torch.randn(1, 3, 512, 512, device=unet_models.device)
-        unet_models.test_garment_encoding(dummy_garment)
+        # Test garment encoding with proper dtype
+        print(f"\n🧪 Testing with device: {device}")
+        if device == "cuda":
+            dummy_garment = torch.randn(1, 3, 64, 64, device=device, dtype=torch.float16)
+        else:
+            dummy_garment = torch.randn(1, 3, 64, 64, device=device, dtype=torch.float16)
+        
+        result = unet_models.test_garment_encoding(dummy_garment)
+        
+        if result is not None:
+            print("✅ Basic functionality test passed!")
+        else:
+            print("⚠️  Basic functionality test had issues")
         
         # Cleanup
         unet_models.cleanup()
