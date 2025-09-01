@@ -46,7 +46,7 @@ class SimpleTryOnPipeline:
         
         # Load all models from Step 3
         self.models = SimpleUNetModels(model_name, self.device)
-        self.models.load_all_models()
+        self.models.load_all()
         
         # Set up pipeline components
         self._setup_pipeline()
@@ -57,11 +57,11 @@ class SimpleTryOnPipeline:
         """Set up the pipeline components and configurations"""
         logger.info("🔧 Setting up pipeline components...")
         
-        # Get loaded models
-        self.unet = self.models.main_unet
-        self.unet_encoder = self.models.garment_encoder_unet
-        self.image_encoder = self.models.image_encoder
-        self.feature_extractor = self.models.feature_extractor
+        # Get loaded models from the models dictionary
+        self.unet = self.models.models['main_unet']
+        self.unet_encoder = self.models.models['garment_encoder_unet']
+        self.image_encoder = self.models.models['image_encoder']
+        self.feature_extractor = self.models.models['feature_extractor']
         
         # Set models to evaluation mode
         self.unet.eval()
@@ -145,9 +145,10 @@ class SimpleTryOnPipeline:
                 
                 # Encode using garment encoder UNet
                 encoded_features = self.unet_encoder(
-                    garment_image,
-                    timestep=torch.zeros(1, device=self.device, dtype=torch.float16),
-                    encoder_hidden_states=torch.zeros(1, 1280, device=self.device, dtype=torch.float16)
+                    sample=garment_image,
+                    timestep=torch.zeros(1, device=self.device, dtype=torch.long),
+                    encoder_hidden_states=torch.zeros(1, 77, 1280, device=self.device, dtype=torch.float16),
+                    return_dict=True
                 ).sample
                 
                 logger.info(f"✅ Garment encoded: {encoded_features.shape}")
@@ -175,8 +176,14 @@ class SimpleTryOnPipeline:
                 # Use CLIP feature extractor and encoder
                 if self.feature_extractor is not None:
                     # Preprocess with CLIP feature extractor
+                    # Convert tensor back to PIL for CLIP processor
+                    if isinstance(human_image, torch.Tensor):
+                        human_pil = self._tensor_to_pil(human_image)
+                    else:
+                        human_pil = human_image
+                    
                     processed_image = self.feature_extractor(
-                        human_image, 
+                        human_pil, 
                         return_tensors="pt"
                     ).pixel_values.to(self.device)
                 else:
