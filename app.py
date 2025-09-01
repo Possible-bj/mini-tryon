@@ -106,9 +106,25 @@ class ChangeClothesAI:
             torch_dtype=torch.float16,
         )
 
-        # Initialize preprocessing models
-        self.parsing_model = Parsing(0)
-        self.openpose_model = OpenPose(0)
+        # Initialize preprocessing models with error handling
+        print("Loading preprocessing models...")
+        
+        # Try to load OpenPose
+        try:
+            self.openpose_model = OpenPose(0)
+            print("✓ OpenPose loaded successfully")
+        except Exception as e:
+            print(f"⚠ Warning: OpenPose failed to load: {e}")
+            self.openpose_model = None
+        
+        # Try to load Human Parsing models
+        try:
+            self.parsing_model = Parsing(0)
+            print("✓ Human Parsing models loaded successfully")
+        except Exception as e:
+            print(f"⚠ Warning: Human Parsing models failed to load: {e}")
+            print("   This will disable automatic masking. You'll need to provide manual masks.")
+            self.parsing_model = None
 
         # Set requires_grad to False for all models
         self.UNet_Encoder.requires_grad_(False)
@@ -200,18 +216,34 @@ class ChangeClothesAI:
             human_img = human_img_orig.resize((768, 1024))
         
         # Generate mask
-        if auto_mask:
+        if auto_mask and self.parsing_model is not None and self.openpose_model is not None:
             print("Generating automatic mask...")
-            keypoints = self.openpose_model(human_img.resize((384, 512)))
-            model_parse, _ = self.parsing_model(human_img.resize((384, 512)))
-            mask, mask_gray = get_mask_location('hd', category, model_parse, keypoints)
-            mask = mask.resize((768, 1024))
-        else:
+            try:
+                keypoints = self.openpose_model(human_img.resize((384, 512)))
+                model_parse, _ = self.parsing_model(human_img.resize((384, 512)))
+                mask, mask_gray = get_mask_location('hd', category, model_parse, keypoints)
+                mask = mask.resize((768, 1024))
+            except Exception as e:
+                print(f"⚠ Automatic masking failed: {e}")
+                print("   Falling back to default mask...")
+                auto_mask = False
+        
+        if not auto_mask or self.parsing_model is None or self.openpose_model is None:
             print("Using default mask...")
             # Create a simple default mask for upper body
             mask = Image.new('L', (768, 1024), 0)
-            # Fill upper half with white (this is a simple approach)
-            mask.paste(255, (0, 0, 768, 512))
+            if category == "upper_body":
+                # Fill upper half with white for upper body
+                mask.paste(255, (0, 0, 768, 512))
+            elif category == "lower_body":
+                # Fill lower half with white for lower body
+                mask.paste(255, (0, 512, 768, 1024))
+            elif category == "dresses":
+                # Fill most of the image for dresses
+                mask.paste(255, (0, 100, 768, 924))
+            else:
+                # Default to upper body
+                mask.paste(255, (0, 0, 768, 512))
         
         # Generate gray mask
         mask_gray = (1 - transforms.ToTensor()(mask)) * self.tensor_transform(human_img)
@@ -219,17 +251,22 @@ class ChangeClothesAI:
         
         # Generate pose information
         print("Generating pose information...")
-        human_img_arg = _apply_exif_orientation(human_img.resize((384, 512)))
-        human_img_arg = convert_PIL_to_numpy(human_img_arg, format="BGR")
-        
-        args = apply_net.create_argument_parser().parse_args((
-            'show', './configs/densepose_rcnn_R_50_FPN_s1x.yaml', 
-            './ckpt/densepose/model_final_162be9.pkl', 'dp_segm', '-v', 
-            '--opts', 'MODEL.DEVICE', self.device
-        ))
-        pose_img = args.func(args, human_img_arg)
-        pose_img = pose_img[:, :, ::-1]
-        pose_img = Image.fromarray(pose_img).resize((768, 1024))
+        try:
+            human_img_arg = _apply_exif_orientation(human_img.resize((384, 512)))
+            human_img_arg = convert_PIL_to_numpy(human_img_arg, format="BGR")
+            
+            args = apply_net.create_argument_parser().parse_args((
+                'show', './configs/densepose_rcnn_R_50_FPN_s1x.yaml', 
+                './ckpt/densepose/model_final_162be9.pkl', 'dp_segm', '-v', 
+                '--opts', 'MODEL.DEVICE', self.device
+            ))
+            pose_img = args.func(args, human_img_arg)
+            pose_img = pose_img[:, :, ::-1]
+            pose_img = Image.fromarray(pose_img).resize((768, 1024))
+        except Exception as e:
+            print(f"⚠ DensePose failed: {e}")
+            print("   Using original image as pose reference...")
+            pose_img = human_img.resize((768, 1024))
         
         # AI generation
         print("Generating AI image...")

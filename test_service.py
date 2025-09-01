@@ -10,8 +10,8 @@ def test_with_custom_images():
     """Test the service with custom image paths"""
     
     # You can modify these paths to test with your own images
-    human_img_path = "example/human/00034_00.jpg"  # Change this to your human image path
-    garment_img_path = "example/cloth/14627_00.jpg"  # Change this to your garment image path
+    human_img_path = "example/human/00121_00.jpg"  # Change this to your human image path
+    garment_img_path = "example/cloth/Girl outfits (4).jpg"  # Change this to your garment image path
     
     # Check if images exist
     if not os.path.exists(human_img_path):
