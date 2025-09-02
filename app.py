@@ -274,8 +274,8 @@ class ChangeClothesAI:
         # AI generation
         print("Generating AI image...")
         with torch.no_grad():
-            # with torch.cuda.amp.autocast() if self.device == "cuda" else torch.no_grad():
-            with torch.amp.autocast() if self.device == "cuda" else torch.no_grad():
+            with torch.cuda.amp.autocast() if self.device == "cuda" else torch.no_grad():
+            # with torch.amp.autocast() if self.device == "cuda" else torch.no_grad():
                 # Generate prompts
                 prompt = "((best quality, masterpiece, ultra-detailed, high quality photography, photo realistic)), the model is wearing " + garment_description
                 negative_prompt = "monochrome, lowres, bad anatomy, worst quality, normal quality, low quality, blurry, jpeg artifacts, sketch"
