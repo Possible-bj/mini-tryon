@@ -339,8 +339,8 @@ if __name__ == '__main__':
     print("  POST /try-on-url - Try-on with image URLs (base64 response)")
     print("  POST /try-on-url-file - Try-on with image URLs (file response)")
     print("\nTo test with file uploads:")
-    print("  curl -X POST -F 'human_image=@human.jpg' -F 'garment_image=@garment.jpg' http://localhost:5000/try-on")
+    print("  curl -X POST -F 'human_image=@human.jpg' -F 'garment_image=@garment.jpg' http://localhost:8000/try-on")
     print("\nTo test with URLs:")
-    print('  curl -X POST -H "Content-Type: application/json" -d \'{"human_image_url":"https://example.com/human.jpg","garment_image_url":"https://example.com/garment.jpg"}\' http://localhost:5000/try-on-url')
+    print('  curl -X POST -H "Content-Type: application/json" -d \'{"human_image_url":"https://example.com/human.jpg","garment_image_url":"https://example.com/garment.jpg"}\' http://localhost:8000/try-on-url')
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=8000, debug=True)
