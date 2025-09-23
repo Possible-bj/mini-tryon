@@ -12,50 +12,22 @@ import io
 import base64
 import requests
 from urllib.parse import urlparse
-import threading
 from app import ChangeClothesAI
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Global service instance and model status tracking
+# Global service instance
 service = None
-model_status = "not_loaded"  # "not_loaded", "loading", "loaded"
-loading_lock = threading.Lock()
 
 def get_service():
     """Get or create the ChangeClothesAI service instance"""
-    global service, model_status
-    
-    # If already loaded, return immediately
-    if service is not None and model_status == "loaded":
-        return service
-    
-    # Use lock to prevent multiple simultaneous loading attempts
-    with loading_lock:
-        # Double-check after acquiring lock
-        if service is not None and model_status == "loaded":
-            return service
-        
-        # If already loading, return None (caller should check status)
-        if model_status == "loading":
-            return None
-        
-        # Start loading
-        model_status = "loading"
+    global service
+    if service is None:
         print("Initializing ChangeClothesAI service...")
-        
-        try:
-            service = ChangeClothesAI()
-            model_status = "loaded"
-            print("Service initialized!")
-            return service
-        except Exception as e:
-            # Reset status on error
-            model_status = "not_loaded"
-            service = None
-            print(f"Failed to initialize service: {e}")
-            raise e
+        service = ChangeClothesAI()
+        print("Service initialized!")
+    return service
 
 def download_image_from_url(url, timeout=30):
     """Download image from URL and return PIL Image object"""
@@ -88,47 +60,10 @@ def health_check():
     """Health check endpoint"""
     return jsonify({"status": "healthy", "message": "ChangeClothesAI service is running"})
 
-@app.route('/model-status', methods=['GET'])
-def model_status_check():
-    """Check the current status of model loading"""
-    global model_status
-    
-    # Try to trigger loading if not started yet
-    if model_status == "not_loaded":
-        try:
-            get_service()  # This will trigger loading
-        except Exception as e:
-            return jsonify({
-                "model_status": "not_loaded",
-                "message": f"Failed to start model loading: {str(e)}",
-                "error": True
-            })
-    
-    return jsonify({
-        "model_status": model_status,
-        "message": f"Models are {model_status}",
-        "error": model_status != "loaded"
-    })
-
 @app.route('/try-on', methods=['POST'])
 def try_on():
     """Main try-on endpoint"""
     try:
-        # Check model status first
-        global model_status
-        
-        # Try to get service (this will trigger loading if needed)
-        service_instance = get_service()
-        
-        # If service is None, it means models are loading
-        if service_instance is None:
-            return jsonify({
-                "error": True,
-                "model_status": model_status,
-                "message": "Models are currently loading. Please check /model-status endpoint and retry when ready.",
-                "retry_after": 5
-            })
-        
         # Get form data
         human_image = request.files.get('human_image')
         garment_image = request.files.get('garment_image')
@@ -156,8 +91,9 @@ def try_on():
             human_image.save(human_path)
             garment_image.save(garment_path)
             
-            # Run try-on
-            result_img, result_mask = service_instance.try_on(
+            # Get service and run try-on
+            service = get_service()
+            result_img, result_mask = service.try_on(
                 human_img_path=human_path,
                 garment_img_path=garment_path,
                 garment_description=garment_description,
@@ -195,21 +131,6 @@ def try_on():
 def try_on_file():
     """Alternative endpoint that returns files instead of base64"""
     try:
-        # Check model status first
-        global model_status
-        
-        # Try to get service (this will trigger loading if needed)
-        service_instance = get_service()
-        
-        # If service is None, it means models are loading
-        if service_instance is None:
-            return jsonify({
-                "error": True,
-                "model_status": model_status,
-                "message": "Models are currently loading. Please check /model-status endpoint and retry when ready.",
-                "retry_after": 5
-            })
-        
         # Get form data
         human_image = request.files.get('human_image')
         garment_image = request.files.get('garment_image')
@@ -237,8 +158,9 @@ def try_on_file():
             human_image.save(human_path)
             garment_image.save(garment_path)
             
-            # Run try-on
-            result_img, result_mask = service_instance.try_on(
+            # Get service and run try-on
+            service = get_service()
+            result_img, result_mask = service.try_on(
                 human_img_path=human_path,
                 garment_img_path=garment_path,
                 garment_description=garment_description,
@@ -265,21 +187,6 @@ def try_on_file():
 def try_on_url():
     """Try-on endpoint that accepts image URLs instead of file uploads"""
     try:
-        # Check model status first
-        global model_status
-        
-        # Try to get service (this will trigger loading if needed)
-        service_instance = get_service()
-        
-        # If service is None, it means models are loading
-        if service_instance is None:
-            return jsonify({
-                "error": True,
-                "model_status": model_status,
-                "message": "Models are currently loading. Please check /model-status endpoint and retry when ready.",
-                "retry_after": 5
-            })
-        
         # Get JSON data
         data = request.get_json()
         if not data:
@@ -319,8 +226,9 @@ def try_on_url():
             human_image.save(human_path)
             garment_image.save(garment_path)
             
-            # Run try-on
-            result_img, result_mask = service_instance.try_on(
+            # Get service and run try-on
+            service = get_service()
+            result_img, result_mask = service.try_on(
                 human_img_path=human_path,
                 garment_img_path=garment_path,
                 garment_description=garment_description,
@@ -358,21 +266,6 @@ def try_on_url():
 def try_on_url_file():
     """Try-on endpoint with URLs that returns the generated image file directly"""
     try:
-        # Check model status first
-        global model_status
-        
-        # Try to get service (this will trigger loading if needed)
-        service_instance = get_service()
-        
-        # If service is None, it means models are loading
-        if service_instance is None:
-            return jsonify({
-                "error": True,
-                "model_status": model_status,
-                "message": "Models are currently loading. Please check /model-status endpoint and retry when ready.",
-                "retry_after": 5
-            })
-        
         # Get JSON data
         data = request.get_json()
         if not data:
@@ -412,8 +305,9 @@ def try_on_url_file():
             human_image.save(human_path)
             garment_image.save(garment_path)
             
-            # Run try-on
-            result_img, result_mask = service_instance.try_on(
+            # Get service and run try-on
+            service = get_service()
+            result_img, result_mask = service.try_on(
                 human_img_path=human_path,
                 garment_img_path=garment_path,
                 garment_description=garment_description,
@@ -440,13 +334,10 @@ if __name__ == '__main__':
     print("Starting ChangeClothesAI API service...")
     print("Available endpoints:")
     print("  GET  /health - Health check")
-    print("  GET  /model-status - Check model loading status")
     print("  POST /try-on - Try-on with file uploads (base64 response)")
     print("  POST /try-on-file - Try-on with file uploads (file response)")
     print("  POST /try-on-url - Try-on with image URLs (base64 response)")
     print("  POST /try-on-url-file - Try-on with image URLs (file response)")
-    print("\nTo check model status:")
-    print("  curl http://localhost:8000/model-status")
     print("\nTo test with file uploads:")
     print("  curl -X POST -F 'human_image=@human.jpg' -F 'garment_image=@garment.jpg' http://localhost:8000/try-on")
     print("\nTo test with URLs:")
