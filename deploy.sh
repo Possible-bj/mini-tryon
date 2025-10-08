@@ -50,12 +50,18 @@ fi
 
 print_success "Python found: $PYTHON_CMD"
 
-# Step 1: Install blinker
+# Step 1: Fix Pillow installation (common issue)
+print_status "Fixing Pillow/PIL installation..."
+$PYTHON_CMD -m pip uninstall -y pillow pil
+$PYTHON_CMD -m pip install --no-cache-dir pillow
+print_success "Pillow reinstalled"
+
+# Step 2: Install blinker
 print_status "Installing blinker..."
 $PYTHON_CMD -m pip install --ignore-installed blinker
 print_success "Blinker installed"
 
-# Step 2: Install requirements
+# Step 3: Install requirements
 print_status "Installing dependencies from requirements_standalone.txt..."
 if [ ! -f "requirements_standalone.txt" ]; then
     print_error "requirements_standalone.txt not found!"
@@ -64,12 +70,12 @@ fi
 $PYTHON_CMD -m pip install -r requirements_standalone.txt
 print_success "Dependencies installed"
 
-# Step 3: Install Flask dependencies for API
+# Step 4: Install Flask dependencies for API
 print_status "Installing Flask dependencies..."
 $PYTHON_CMD -m pip install flask flask-cors
 print_success "Flask dependencies installed"
 
-# Step 4: Download models
+# Step 5: Download models
 print_status "Downloading models (this may take a while)..."
 if [ ! -f "download_models.py" ]; then
     print_error "download_models.py not found!"

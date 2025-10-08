@@ -171,7 +171,14 @@ If the deployment script fails, try these steps:
    - Try running with explicit path: `/usr/bin/python3 deploy.py`
    - Or use the Python script instead: `python3 deploy.py`
 
-3. **Permission denied on deploy.sh:**
+4. **Pillow/PIL ImportError:**
+   ```bash
+   pip uninstall -y pillow pil
+   pip install --no-cache-dir pillow
+   ```
+   This fixes the common `ImportError: cannot import name 'ImageChops' from 'PIL'` error.
+
+5. **Permission denied on deploy.sh:**
    ```bash
    chmod +x deploy.sh
    ./deploy.sh

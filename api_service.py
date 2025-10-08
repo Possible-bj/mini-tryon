@@ -436,31 +436,6 @@ def try_on_url_file():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-def preload_models():
-    """Preload models in a background thread"""
-    try:
-        print("=" * 60)
-        print("🔄 Starting model preloading in background...")
-        print("=" * 60)
-        get_service()
-        print("=" * 60)
-        print("✅ Models loaded successfully! API is ready to use.")
-        print("=" * 60)
-    except Exception as e:
-        print("=" * 60)
-        print(f"❌ Failed to preload models: {e}")
-        print("Models will be loaded on first request.")
-        print("=" * 60)
-
-@app.after_serving
-def after_serving():
-    """Start preloading models after server starts but before first request"""
-    def preload_in_background():
-        preload_models()
-    
-    preload_thread = threading.Thread(target=preload_in_background, daemon=True)
-    preload_thread.start()
-
 if __name__ == '__main__':
     print("Starting ChangeClothesAI API service...")
     print("Available endpoints:")

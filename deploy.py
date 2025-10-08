@@ -83,28 +83,41 @@ def main():
         print_error("Please run this script from the STEP_BY_STEP directory")
         sys.exit(1)
     
-    # Step 1: Install blinker
+    # Step 1: Fix Pillow installation (common issue)
+    if not run_command(
+        [python_cmd, "-m", "pip", "uninstall", "-y", "pillow", "pil"],
+        "Removing old Pillow installation"
+    ):
+        pass  # Continue even if uninstall fails
+    
+    if not run_command(
+        [python_cmd, "-m", "pip", "install", "--no-cache-dir", "pillow"],
+        "Installing fresh Pillow"
+    ):
+        sys.exit(1)
+    
+    # Step 2: Install blinker
     if not run_command(
         [python_cmd, "-m", "pip", "install", "--ignore-installed", "blinker"],
         "Installing blinker"
     ):
         sys.exit(1)
     
-    # Step 2: Install requirements
+    # Step 3: Install requirements
     if not run_command(
         [python_cmd, "-m", "pip", "install", "-r", "requirements_standalone.txt"],
         "Installing dependencies from requirements_standalone.txt"
     ):
         sys.exit(1)
     
-    # Step 3: Install Flask dependencies
+    # Step 4: Install Flask dependencies
     if not run_command(
         [python_cmd, "-m", "pip", "install", "flask", "flask-cors"],
         "Installing Flask dependencies"
     ):
         sys.exit(1)
     
-    # Step 4: Download models
+    # Step 5: Download models
     if not Path("download_models.py").exists():
         print_error("download_models.py not found!")
         sys.exit(1)
