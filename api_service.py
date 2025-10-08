@@ -452,6 +452,15 @@ def preload_models():
         print("Models will be loaded on first request.")
         print("=" * 60)
 
+@app.before_serving
+def before_serving():
+    """Start preloading models after server starts but before first request"""
+    def preload_in_background():
+        preload_models()
+    
+    preload_thread = threading.Thread(target=preload_in_background, daemon=True)
+    preload_thread.start()
+
 if __name__ == '__main__':
     print("Starting ChangeClothesAI API service...")
     print("Available endpoints:")
@@ -469,8 +478,7 @@ if __name__ == '__main__':
     print('  curl -X POST -H "Content-Type: application/json" -d \'{"human_image_url":"https://example.com/human.jpg","garment_image_url":"https://example.com/garment.jpg"}\' http://localhost:8000/try-on-url')
     print()
     
-    # Start preloading models in a background thread
-    preload_thread = threading.Thread(target=preload_models, daemon=True)
-    preload_thread.start()
+    print("🚀 Starting Flask server...")
+    print("💡 Models will start loading when first request arrives")
     
     app.run(host='0.0.0.0', port=8000, debug=True)
