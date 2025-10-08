@@ -436,6 +436,22 @@ def try_on_url_file():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+def preload_models():
+    """Preload models in a background thread"""
+    try:
+        print("=" * 60)
+        print("🔄 Starting model preloading in background...")
+        print("=" * 60)
+        get_service()
+        print("=" * 60)
+        print("✅ Models loaded successfully! API is ready to use.")
+        print("=" * 60)
+    except Exception as e:
+        print("=" * 60)
+        print(f"❌ Failed to preload models: {e}")
+        print("Models will be loaded on first request.")
+        print("=" * 60)
+
 if __name__ == '__main__':
     print("Starting ChangeClothesAI API service...")
     print("Available endpoints:")
@@ -451,5 +467,10 @@ if __name__ == '__main__':
     print("  curl -X POST -F 'human_image=@human.jpg' -F 'garment_image=@garment.jpg' http://localhost:8000/try-on")
     print("\nTo test with URLs:")
     print('  curl -X POST -H "Content-Type: application/json" -d \'{"human_image_url":"https://example.com/human.jpg","garment_image_url":"https://example.com/garment.jpg"}\' http://localhost:8000/try-on-url')
+    print()
+    
+    # Start preloading models in a background thread
+    preload_thread = threading.Thread(target=preload_models, daemon=True)
+    preload_thread.start()
     
     app.run(host='0.0.0.0', port=8000, debug=True)

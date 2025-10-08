@@ -16,17 +16,56 @@ The service uses AI to virtually try on clothing items on human images. It combi
 - `test_service.py` - Simple test script
 - `api_service.py` - Flask API service for frontend integration
 - `requirements_standalone.txt` - Dependencies without Gradio/spaces
+- `deploy.sh` - Automated deployment script (Mac/Linux)
+- `deploy.py` - Automated deployment script (Cross-platform)
+- `download_models.py` - Model download script
 
 ## Installation
 
+### Quick Deploy (Recommended)
+
+Use the automated deployment script that handles all setup steps:
+
+**Option 1: Bash script (Mac/Linux)**
+```bash
+./deploy.sh
+```
+
+**Option 2: Python script (Cross-platform)**
+```bash
+python deploy.py
+```
+
+The deploy script will:
+1. Install blinker
+2. Install all dependencies from `requirements_standalone.txt`
+3. Install Flask dependencies for the API
+4. Download all required models
+5. Optionally start the API service
+
+### Manual Installation
+
+If you prefer to install manually:
+
 1. **Install dependencies:**
    ```bash
+   pip install --ignore-installed blinker
    pip install -r requirements_standalone.txt
    ```
 
-2. **Additional dependencies for API:**
+2. **Download models:**
+   ```bash
+   python download_models.py
+   ```
+
+3. **Install API dependencies:**
    ```bash
    pip install flask flask-cors
+   ```
+
+4. **Start the service:**
+   ```bash
+   python api_service.py
    ```
 
 ## Quick Test
