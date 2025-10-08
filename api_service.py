@@ -454,6 +454,5 @@ if __name__ == '__main__':
     print()
     
     print("🚀 Starting Flask server...")
-    print("💡 Models will start loading when first request arrives")
-    
+
     app.run(host='0.0.0.0', port=8000, debug=True)

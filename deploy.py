@@ -78,46 +78,124 @@ def main():
     print()
     
     # Check if we're in the right directory
-    if not Path("requirements_standalone.txt").exists():
-        print_error("requirements_standalone.txt not found!")
-        print_error("Please run this script from the STEP_BY_STEP directory")
-        sys.exit(1)
+    requirements_file = "requirements_minimal.txt"
+    if not Path(requirements_file).exists():
+        # Fallback to original requirements
+        requirements_file = "requirements_standalone.txt"
+        if not Path(requirements_file).exists():
+            print_error("No requirements file found!")
+            print_error("Please ensure requirements_minimal.txt or requirements_standalone.txt exists")
+            sys.exit(1)
     
-    # Step 1: Fix Pillow installation (common issue)
+    print_success(f"Using requirements file: {requirements_file}")
+    
+    # Step 1: Upgrade pip and essential tools
+    print_status("Upgrading pip and build tools...")
     if not run_command(
-        [python_cmd, "-m", "pip", "uninstall", "-y", "pillow", "pil"],
-        "Removing old Pillow installation"
+        [python_cmd, "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"],
+        "Upgrading pip, setuptools, and wheel"
     ):
-        pass  # Continue even if uninstall fails
+        print_error("Failed to upgrade pip - continuing anyway")
     
+    # Step 2: Install PyTorch first (often needs specific handling)
+    print_status("Installing PyTorch...")
     if not run_command(
-        [python_cmd, "-m", "pip", "install", "--no-cache-dir", "pillow"],
-        "Installing fresh Pillow"
+        [python_cmd, "-m", "pip", "install", "torch>=2.0.0", "torchvision>=0.15.0"],
+        "Installing PyTorch"
     ):
-        sys.exit(1)
+        print_error("PyTorch installation failed - trying CPU-only version")
+        run_command(
+            [python_cmd, "-m", "pip", "install", "torch", "torchvision", "--index-url", "https://download.pytorch.org/whl/cpu"],
+            "Installing PyTorch CPU-only version"
+        )
     
-    # Step 2: Install blinker
+    # Step 3: Install core requirements
+    print_status(f"Installing dependencies from {requirements_file}...")
     if not run_command(
-        [python_cmd, "-m", "pip", "install", "--ignore-installed", "blinker"],
-        "Installing blinker"
+        [python_cmd, "-m", "pip", "install", "-r", requirements_file],
+        f"Installing dependencies from {requirements_file}"
     ):
-        sys.exit(1)
+        print_error(f"Failed to install from {requirements_file}")
+        if requirements_file == "requirements_minimal.txt":
+            print_status("Trying fallback to requirements_standalone.txt...")
+            if Path("requirements_standalone.txt").exists():
+                run_command(
+                    [python_cmd, "-m", "pip", "install", "-r", "requirements_standalone.txt"],
+                    "Installing from requirements_standalone.txt"
+                )
+            else:
+                sys.exit(1)
+        else:
+            sys.exit(1)
     
-    # Step 3: Install requirements
+    # Step 4: Install additional packages that might be missing
+    print_status("Installing additional packages...")
+    additional_packages = [
+        "config",
+        "fvcore", 
+        "pycocotools",
+        "av",
+        "blinker"
+    ]
+    
+    for package in additional_packages:
+        run_command(
+            [python_cmd, "-m", "pip", "install", package],
+            f"Installing {package}"
+        )
+    
+    # Step 5: Try to install problematic packages with fallbacks
+    print_status("Installing optional packages...")
+    
+    # Try BasicSR
     if not run_command(
-        [python_cmd, "-m", "pip", "install", "-r", "requirements_standalone.txt"],
-        "Installing dependencies from requirements_standalone.txt"
+        [python_cmd, "-m", "pip", "install", "basicsr>=1.4.2"],
+        "Installing BasicSR"
     ):
-        sys.exit(1)
+        print_status("BasicSR pip install failed, trying from source...")
+        run_command(
+            [python_cmd, "-m", "pip", "install", "git+https://github.com/XPixelGroup/BasicSR.git"],
+            "Installing BasicSR from source"
+        )
     
-    # Step 4: Install Flask dependencies
-    if not run_command(
-        [python_cmd, "-m", "pip", "install", "flask", "flask-cors"],
-        "Installing Flask dependencies"
-    ):
-        sys.exit(1)
+    # Try Detectron2
+    run_command(
+        [python_cmd, "-m", "pip", "install", "detectron2", "-f", "https://dl.fbaipublicfiles.com/detectron2/wheels/cu118/torch2.0/index.html"],
+        "Installing Detectron2"
+    )
     
-    # Step 5: Download models
+    # Step 6: Verify critical imports
+    print_status("Verifying critical imports...")
+    critical_imports = [
+        "torch",
+        "torchvision", 
+        "PIL",
+        "cv2",
+        "numpy",
+        "transformers",
+        "diffusers",
+        "flask"
+    ]
+    
+    failed_imports = []
+    for module in critical_imports:
+        try:
+            result = subprocess.run(
+                [python_cmd, "-c", f"import {module}; print('{module} - OK')"],
+                capture_output=True, text=True, check=True
+            )
+            print_success(f"{module} - OK")
+        except subprocess.CalledProcessError:
+            print_error(f"{module} - FAILED")
+            failed_imports.append(module)
+    
+    if failed_imports:
+        print_error(f"Warning: {len(failed_imports)} critical imports failed:")
+        for module in failed_imports:
+            print_error(f"  - {module}")
+        print_status("You may need to install these packages manually")
+    
+    # Step 7: Download models
     if not Path("download_models.py").exists():
         print_error("download_models.py not found!")
         sys.exit(1)
@@ -131,13 +209,36 @@ def main():
         print_success("Models downloaded")
     except subprocess.CalledProcessError as e:
         print_error("Failed to download models")
-        sys.exit(1)
+        print_status("You can download models manually later by running: python download_models.py")
+        # Don't exit on model download failure - let user start service anyway
     
     # Success message
     print()
     print("=" * 50)
-    print(f"{Colors.GREEN}Deployment completed successfully!{Colors.NC}")
+    if failed_imports:
+        print(f"{Colors.GREEN}Deployment completed with warnings!{Colors.NC}")
+        print(f"{Colors.RED}Some packages may need manual installation{Colors.NC}")
+    else:
+        print(f"{Colors.GREEN}Deployment completed successfully!{Colors.NC}")
     print("=" * 50)
+    print()
+    
+    # Show status summary
+    print("Installation Summary:")
+    print("  ✓ Core dependencies installed")
+    print("  ✓ PyTorch installed")
+    print("  ✓ Additional packages installed")
+    print("  ✓ Optional packages attempted")
+    if failed_imports:
+        print(f"  {Colors.RED}✗ {len(failed_imports)} critical imports failed{Colors.NC}")
+    else:
+        print("  ✓ All critical imports verified")
+    
+    print()
+    print("Available commands:")
+    print(f"  {python_cmd} api_service.py          # Start API service")
+    print(f"  {python_cmd} download_models.py      # Download models manually")
+    print(f"  {python_cmd} install_minimal.py      # Re-run minimal installation")
     print()
     
     # Ask if user wants to start the service

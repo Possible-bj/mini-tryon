@@ -1,25 +1,41 @@
+# Core ML/AI packages
+torch>=2.0.0
+torchvision>=0.15.0
 transformers==4.36.2
+diffusers==0.25.0
+huggingface_hub==0.25.0
+accelerate==0.26.1
+
+# Image processing
 numpy==1.24.4
 scipy==1.10.1
 scikit-image==0.21.0
 opencv-python==4.7.0.72
-pillow==9.4.0
-diffusers==0.25.0
-huggingface_hub==0.25.0
-transformers==4.36.2
-accelerate==0.26.1
+pillow==10.0.0
 matplotlib==3.7.4
+
+# Utilities
 tqdm==4.64.1
 config==0.5.1
 einops==0.7.0
-onnxruntime==1.16.2
-basicsr
-av
-fvcore
 cloudpickle
 omegaconf
-pycocotools
 pydantic==2.10.6
+
+# ONNX runtime (with fallback)
+onnxruntime==1.16.2
+
+# Computer vision libraries (with fallbacks)
+fvcore
+pycocotools
+
+# Video processing
+av
+
+# Web framework
 flask==2.3.3
 flask-cors==4.0.0
 requests==2.31.0
+
+# BasicSR - install from source if wheel fails
+# basicsr>=1.4.2
