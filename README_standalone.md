@@ -156,11 +156,33 @@ The service generates:
 
 ## Troubleshooting
 
+### Deployment Issues
+
+If the deployment script fails, try these steps:
+
+1. **Check Python installation:**
+   ```bash
+   python check_python.py
+   ```
+   This will diagnose Python environment issues.
+
+2. **Python not found error:**
+   - Make sure Python is installed: `python3 --version`
+   - Try running with explicit path: `/usr/bin/python3 deploy.py`
+   - Or use the Python script instead: `python3 deploy.py`
+
+3. **Permission denied on deploy.sh:**
+   ```bash
+   chmod +x deploy.sh
+   ./deploy.sh
+   ```
+
 ### Common Issues
 
 1. **CUDA out of memory**: Reduce `denoise_steps` or use CPU mode
 2. **Model loading errors**: Check if all model files are present
 3. **Image format errors**: Ensure images are JPG/PNG format
+4. **Python PATH issues**: Use `python3 deploy.py` instead of `./deploy.sh`
 
 ### Performance Tips
 

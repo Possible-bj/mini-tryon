@@ -31,13 +31,23 @@ print_error() {
 
 # Check if Python is available
 print_status "Checking Python installation..."
-if ! command -v python &> /dev/null && ! command -v python3 &> /dev/null; then
+
+# Try common Python locations
+PYTHON_CMD=""
+for cmd in python3 python /usr/bin/python3 /usr/bin/python; do
+    if command -v "$cmd" &> /dev/null; then
+        PYTHON_CMD="$cmd"
+        break
+    fi
+done
+
+if [ -z "$PYTHON_CMD" ]; then
     print_error "Python is not installed or not in PATH"
+    print_error "Tried: python3, python, /usr/bin/python3, /usr/bin/python"
+    print_error "Please install Python or add it to your PATH"
     exit 1
 fi
 
-# Use python3 if available, otherwise python
-PYTHON_CMD=$(command -v python3 || command -v python)
 print_success "Python found: $PYTHON_CMD"
 
 # Step 1: Install blinker

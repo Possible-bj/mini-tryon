@@ -61,9 +61,20 @@ def main():
     print("=" * 50)
     print()
     
-    # Get Python executable
+    # Get Python executable - try multiple approaches
     python_cmd = sys.executable
-    print_success(f"Using Python: {python_cmd}")
+    
+    # Verify Python works by testing import
+    try:
+        import subprocess
+        result = subprocess.run([python_cmd, "--version"], 
+                              capture_output=True, text=True, check=True)
+        print_success(f"Using Python: {python_cmd} ({result.stdout.strip()})")
+    except Exception as e:
+        print_error(f"Python verification failed: {e}")
+        print_error("Please ensure Python is properly installed")
+        sys.exit(1)
+    
     print()
     
     # Check if we're in the right directory
