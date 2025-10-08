@@ -452,8 +452,8 @@ def preload_models():
         print("Models will be loaded on first request.")
         print("=" * 60)
 
-@app.before_serving
-def before_serving():
+@app.after_serving
+def after_serving():
     """Start preloading models after server starts but before first request"""
     def preload_in_background():
         preload_models()
