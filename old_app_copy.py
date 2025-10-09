@@ -38,7 +38,7 @@ def pil_to_binary_mask(pil_image, threshold=0):
 
 
 class ChangeClothesAI:
-    def __init__(self, base_path='yisol/IDM-VTON'):
+    def __init__(self, base_path='mkddatascience/IDM-VTON'):
         """Initialize the Change Clothes AI service"""
         self.base_path = base_path
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
