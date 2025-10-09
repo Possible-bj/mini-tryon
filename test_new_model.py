@@ -1,7 +1,7 @@
 from diffusers import DiffusionPipeline
 from diffusers.utils import load_image
 
-pipe = DiffusionPipeline.from_pretrained("./downloaded_model")
+pipe = DiffusionPipeline.from_pretrained("mkddatascience/IDM-VTON")
 
 prompt = "Turn this cat into a dog"
 input_image = load_image("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/cat.png")

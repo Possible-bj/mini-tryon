@@ -157,7 +157,7 @@ def try_on():
             garment_image.save(garment_path)
             
             # Run try-on
-            result_img, result_mask = service_instance.try_on(
+            result_imgs, result_masks = service_instance.try_on(
                 human_img_path=human_path,
                 garment_img_path=garment_path,
                 garment_description=garment_description,
@@ -176,12 +176,16 @@ def try_on():
                 img.save(buffer, format='PNG')
                 buffer.seek(0)
                 return base64.b64encode(buffer.getvalue()).decode()
-            
+            generated_images = []
+            generated_masks = []
+            for i in range(len(result_imgs)):
+                generated_images.append(image_to_base64(result_imgs[i]))
+                generated_masks.append(image_to_base64(result_masks[i]))
             # Return results
             return jsonify({
                 "success": True,
-                "generated_image": image_to_base64(result_img),
-                "mask_image": image_to_base64(result_mask),
+                "generated_images": generated_images,
+                "mask_images": generated_masks,
                 "message": "Try-on completed successfully"
             })
             
@@ -238,7 +242,7 @@ def try_on_file():
             garment_image.save(garment_path)
             
             # Run try-on
-            result_img, result_mask = service_instance.try_on(
+            result_imgs, result_masks = service_instance.try_on(
                 human_img_path=human_path,
                 garment_img_path=garment_path,
                 garment_description=garment_description,
@@ -250,7 +254,7 @@ def try_on_file():
                 save_output=True,
                 output_path=temp_dir
             )
-            
+
             # Return the generated image file
             output_path = os.path.join(temp_dir, "generated_image.png")
             return send_file(output_path, mimetype='image/png')
@@ -320,7 +324,7 @@ def try_on_url():
             garment_image.save(garment_path)
             
             # Run try-on
-            result_img, result_mask = service_instance.try_on(
+            result_imgs, result_masks = service_instance.try_on(
                 human_img_path=human_path,
                 garment_img_path=garment_path,
                 garment_description=garment_description,
@@ -339,12 +343,17 @@ def try_on_url():
                 img.save(buffer, format='PNG')
                 buffer.seek(0)
                 return base64.b64encode(buffer.getvalue()).decode()
-            
+
+            generated_images = []
+            generated_masks = []
+            for i in range(len(result_imgs)):
+                generated_images.append(image_to_base64(result_imgs[i]))
+                generated_masks.append(image_to_base64(result_masks[i]))
             # Return results
             return jsonify({
                 "success": True,
-                "generated_image": image_to_base64(result_img),
-                "mask_image": image_to_base64(result_mask),
+                "generated_images": generated_images,
+                "mask_images": generated_masks,
                 "message": "Try-on completed successfully from URLs"
             })
             
@@ -413,7 +422,7 @@ def try_on_url_file():
             garment_image.save(garment_path)
             
             # Run try-on
-            result_img, result_mask = service_instance.try_on(
+            result_imgs, result_masks = service_instance.try_on(
                 human_img_path=human_path,
                 garment_img_path=garment_path,
                 garment_description=garment_description,

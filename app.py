@@ -277,13 +277,13 @@ class ChangeClothesAI:
             with torch.cuda.amp.autocast() if self.device == "cuda" else torch.no_grad():
             # with torch.amp.autocast() if self.device == "cuda" else torch.no_grad():
                 # Generate prompts
-                prompt = "((best quality, masterpiece, ultra-detailed, high quality photography, photo realistic)), the model is wearing " + garment_description
+                prompt = "((best quality, masterpiece, ultra-detailed, high quality photography, photo realistic. you are to generate 5 images which includes, the `Full Body, Front Wasit Up, Back Waist Up, Side Profile, and Other side profile`)), the model is wearing " + garment_description
                 negative_prompt = "monochrome, lowres, bad anatomy, worst quality, normal quality, low quality, blurry, jpeg artifacts, sketch"
                 
                 # Encode prompts
                 (prompt_embeds, negative_prompt_embeds, pooled_prompt_embeds, 
                  negative_pooled_prompt_embeds) = self.pipe.encode_prompt(
-                    prompt, num_images_per_prompt=1, do_classifier_free_guidance=True,
+                    prompt, num_images_per_prompt=5, do_classifier_free_guidance=True,
                     negative_prompt=negative_prompt
                 )
                 
@@ -322,25 +322,31 @@ class ChangeClothesAI:
                     width=768,
                     ip_adapter_image=garm_img.resize((768, 1024)),
                     guidance_scale=2.0,
-                )[0]
+                )
         
         # Post-process results
+        result_imgs = []
+        result_masks = []
         if auto_crop:
-            result_img = images[0].resize(crop_size)
-            result_mask = mask_gray.resize(crop_size)
+            for i in range(len(images)):
+                result_imgs[i] = images[i].resize(crop_size)
+                result_masks[i] = mask_gray.resize(crop_size)
         else:
-            result_img = images[0].resize(orig_size)
-            result_mask = mask_gray.resize(orig_size)
+            for i in range(len(images)):
+                result_imgs[i] = images[i].resize(orig_size)
+                result_masks[i] = mask_gray.resize(orig_size)
+            return result_imgs, result_masks
         
         # Save results if requested
         if save_output:
             os.makedirs(output_path, exist_ok=True)
-            result_img.save(os.path.join(output_path, "generated_image.png"))
-            result_mask.save(os.path.join(output_path, "mask_image.png"))
+            for i in range(len(result_imgs)):
+                result_imgs[i].save(os.path.join(output_path, f"generated_image_{i}.png"))
+                result_masks[i].save(os.path.join(output_path, f"mask_image_{i}.png"))
             print(f"Results saved to {output_path}/")
         
         print("Try-on process completed!")
-        return result_img, result_mask
+        return result_imgs, result_masks
 
 
 def test_try_on():
